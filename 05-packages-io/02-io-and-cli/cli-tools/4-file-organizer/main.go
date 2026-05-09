@@ -44,7 +44,7 @@ import (
 // ENGINEERING DEPTH:
 //   The `flag` package uses a registration pattern - you call `flag.String()`
 //   to register each flag, which returns a *string pointer. The actual parsing
-//   doesn't happen until you call `flag.Parse()`. This two-step approach allows
+//   doesn't happen until you call `args := os.Args[1:]; if len(args) > 0 && args[0] == os.Args[0] { args = args[1:] }; flag.CommandLine.Parse(args)`. This two-step approach allows
 //   you to define flags anywhere in your code (even in init() functions across
 //   packages) before a single centralized Parse() call processes them all.
 //
@@ -52,30 +52,30 @@ import (
 // FLAGS: --dir (required), --dry-run (optional, default false)
 
 func main() {
-	// Define CLI flags using the flag package.
-	// flag.String returns a *string - a pointer to the flag's value.
-	dir := flag.String("dir", "", "Directory to organize (required)")
-	dryRun := flag.Bool("dry-run", false, "Preview changes without moving files")
+	args := os.Args[1:]
+	if len(args) > 0 && args[0] == os.Args[0] {
+		args = args[1:]
+	}
 
-	// flag.Parse() processes os.Args and assigns values to the registered flags.
-	flag.Parse()
+	fs := flag.NewFlagSet("file-organizer", flag.ExitOnError)
+	dir := fs.String("dir", "", "Directory to organize (required)")
+	dryRun := fs.Bool("dry-run", false, "Preview changes without moving files")
 
-	// Validate required flag
+	fs.Parse(args)
+
 	if *dir == "" {
 		fmt.Println("=== File Organizer ===")
 		fmt.Println()
 		fmt.Println("Organizes files in a directory by extension.")
 		fmt.Println()
-		flag.Usage()
+		fs.Usage()
 		fmt.Println()
 		fmt.Println("Running demo mode...")
 		fmt.Println()
 
-		// Create a demo directory for self-contained execution
 		tmpDir, _ := os.MkdirTemp("", "organizer-demo-*")
 		defer os.RemoveAll(tmpDir)
 
-		// Create sample files with various extensions
 		sampleFiles := []string{
 			"report.pdf", "photo.jpg", "notes.txt", "main.go",
 			"styles.css", "readme.md", "data.json", "script.py",
@@ -85,7 +85,7 @@ func main() {
 		}
 
 		*dir = tmpDir
-		*dryRun = true // Demo always runs in dry-run mode
+		*dryRun = true
 	}
 
 	fmt.Printf("DIR: Organizing: %s\n", *dir)
